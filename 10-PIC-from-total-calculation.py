@@ -20,7 +20,7 @@ import easygui
 
 #%% Load re-formatted csv
 #Is there a way to auto load the orginial? Perhaps it's not in a reliable format...
-UMO_file = easygui.fileopenbox(title = "PIC file from UMaine", default = "Z:\\projects\\", filetypes = ["*.xlsx"])
+UMO_file = easygui.fileopenbox(title = "PIC file from UMaine", filetypes = ["*.xlsx"])
 data_in = pd.read_excel(UMO_file, usecols = [0,1,2,3,4], skiprows = 5, header = None)
 data_in.columns = ["Tube Number", "Ca", "Sr", "Mg", "Na"]
 
@@ -28,7 +28,9 @@ data_in.columns = ["Tube Number", "Ca", "Sr", "Mg", "Na"]
 #here we need to be sure all metadata is correctly formatted and alligned with the data. Anything stored in the sample names should be extracted
 #also if samples come back without sample names, just tube numbers, can we match it up automatically? Maybe even check for discrepencies?
 
-metadata = pd.read_excel("Z:\\projects\\CHALKY\\data\\PIC\\PIC sample logsheet.xlsx")
+metadata_file = easygui.fileopenbox(title = "PIC sample log", filetypes = ["*.xlsx"])
+
+metadata = pd.read_excel(metadata_file)
 
 data_all = pd.merge(metadata, data_in) #This merge matches on common columns, in this case only "Tube Number". It also removes all the "lab blank" and "QC" rows, which is nice. It will remove anything that does not have a tube number.
 #%% Blank identifcation and averaging
@@ -97,7 +99,6 @@ vol_corrected = {
 #%% Conversion into final desired units
 data['PIC (ug/L)'] = vol_corrected['Ca'] * 0.3
 
-
 #%% Groupby averaging over replicates. Create second dataframe with average and sd.
 pic_data = data.drop(['Tube Number', 'replicate'], axis = 1)
 pic_mean = pic_data.groupby(['Station', 'Niskin/Subset'], dropna = False).agg(pic_mean = ('PIC (ug/L)', np.mean), pic_sd = ('PIC (ug/L)', np.std)).reset_index()
@@ -105,6 +106,7 @@ pic_mean = pic_data.groupby(['Station', 'Niskin/Subset'], dropna = False).agg(pi
 metadata_trimmed = metadata.drop(['Tube Number', 'replicate', 'notes', 'Filter Volume', 'Unnamed: 7'], axis = 1)
 
 pic_mean_export = pd.merge(pic_mean, metadata_trimmed, on = ['Station', 'Niskin/Subset'], how = "left").drop_duplicates()
+
 
 #%% Format for file output, including cruise name and cruise directory
 #Add back in any metadata that has been lost along the way
