@@ -10,6 +10,9 @@ The excel file we get from UMaine is rather poorly formatted, and needs to be co
 How much do we want to do via pop-ups a la the PSICAM Rho calc sheet?
 
 We may need to break up the samples into their own categories such as different cruises (if we send in batches) or types of deployments (surface samples vs. CTDs, etc.)
+
+25/Nov/2025 update: Just added better unit conversion and more units. Results are the same.
+
 @author: fmiller
 """
 
@@ -97,18 +100,26 @@ vol_corrected = {
 }
 
 #%% Conversion into final desired units
-data['PIC (ug/L)'] = vol_corrected['Ca'] * 0.3
+#data['PIC (ug/L)'] = vol_corrected['Ca'] * 0.3
+
+
+#%% 25/Nov/2025 adding unit conversion
+#In both steps, the /1000 is the same as *1000 /1000000 which is the two unti conversions.
+data['pic_mol_per_m3'] = vol_corrected['Ca'] / 40.08 / 1000
+
+#This re-converts the mols of Ca per m3 to ug of C per m3, then to ug per L
+data['pic_ug_l'] = data['pic_mol_per_m3'] * 12.011 * 1000 
 
 #%% Groupby averaging over replicates. Create second dataframe with average and sd.
 pic_data = data.drop(['Tube Number', 'replicate'], axis = 1)
-pic_mean = pic_data.groupby(['Station', 'Niskin/Subset'], dropna = False).agg(pic_mean = ('PIC (ug/L)', np.mean), pic_sd = ('PIC (ug/L)', np.std)).reset_index()
+pic_mean = pic_data.groupby(['Station', 'Niskin/Subset'], dropna = False).agg(pic_mean = ('pic_ug_l', np.mean), pic_sd = ('pic_ug_l', np.std)).reset_index()
 
 metadata_trimmed = metadata.drop(['Tube Number', 'replicate', 'notes', 'Filter Volume', 'Unnamed: 7'], axis = 1)
 
 pic_mean_export = pd.merge(pic_mean, metadata_trimmed, on = ['Station', 'Niskin/Subset'], how = "left").drop_duplicates()
 
 
-#%% Format for file output, including cruise name and cruise directory
+#%%#%% Format for file output, including cruise name and cruise directory
 #Add back in any metadata that has been lost along the way
 pic_mean_export.to_csv("Z:\\projects\\CHALKY\\data\\PIC\\PIC_calculated_mean.csv", index = False)
 data.to_csv("Z:\\projects\\CHALKY\\data\\PIC\\PIC_calculated_all.csv", index = False)
